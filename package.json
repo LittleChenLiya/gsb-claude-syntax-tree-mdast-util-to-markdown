@@ -74,7 +74,8 @@
   "scripts": {
     "build": "tsc --build --clean && tsc --build && type-coverage",
     "format": "remark --frail --output --quiet -- . && prettier --log-level warn --write -- . && xo --fix",
-    "test-api": "node --conditions development test/index.js",
+    "test-api": "node --conditions development test/index.js && npm run test-strategy",
+    "test-strategy": "node test/list-marker-strategy.js",
     "test-coverage": "c8 --100 --reporter lcov -- npm run test-api",
     "test": "npm run build && npm run format && npm run test-coverage"
   },

@@ -424,6 +424,34 @@ Either with the size of the bullet plus one space (when `'one'`), a tab stop
 (`'tab'`), or depending on the item and its parent list (`'mixed'`, uses `'one'`
 if the item and list are tight and `'tab'` otherwise).
 
+###### `options.listMarkerStrategy`
+
+Strategy used to pick list markers (`'default'` or `'contextual'`, default:
+`'default'`).
+
+With `'default'`, the markers configured with `bullet`, `bulletOther`, and
+`bulletOrdered` are used, and the alternate marker is only used when the
+previously serialized list used the same marker.
+
+With `'contextual'`, the marker of each list is chosen from its adjacent
+sibling blocks instead of from global serialization state:
+
+* in a run of directly adjacent lists of the same kind, markers alternate
+  between the primary and the other marker, so that adjacent lists stay
+  separate lists when the output is reparsed (markers are never chosen by
+  globally replacing the first character)
+* nested lists are handled within their own parent, separately from other
+  levels
+* ordered lists keep their `start` number, which is handled separately from
+  the marker choice
+* an indented code block that directly follows a list (or another indented
+  code block) is fenced, so that reparsing the output yields the same blocks
+  without injecting an HTML comment between them
+
+In both modes, markers are still chosen so that they cannot be misread as a
+thematic break, and the blank lines that distinguish tight from loose lists
+are preserved.
+
 ###### `options.quote`
 
 Marker to use for titles (`'"'` or `"'"`, default: `'"'`).
