@@ -3998,6 +3998,398 @@ test('listItem', async function (t) {
   )
 })
 
+test('listMarkerStrategy', async function (t) {
+  await t.test(
+    'should throw on an incorrect `listMarkerStrategy`',
+    async function () {
+      assert.throws(function () {
+        to(createList(), {
+          // @ts-expect-error: check how the runtime handles `listMarkerStrategy` being wrong.
+          listMarkerStrategy: 'x'
+        })
+      }, /Cannot serialize items with `x` for `options\.listMarkerStrategy`, expected `default` or `context`/)
+    }
+  )
+
+  await t.test(
+    'should support a list without a parent with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(to(createList(), {listMarkerStrategy: 'context'}), '*\n')
+    }
+  )
+
+  await t.test(
+    'should use the preferred marker after a non-list sibling with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              {type: 'paragraph', children: [{type: 'text', value: 'a'}]},
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'b'}]
+              })
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        'a\n\n* b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should use a different marker for adjacent lists with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'a'}]
+              }),
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'b'}]
+              })
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '* a\n\n- b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should alternate markers for three adjacent lists with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'a'}]
+              }),
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'b'}]
+              }),
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'c'}]
+              })
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '* a\n\n- b\n\n* c\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should not switch markers between lists of different kinds with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'a'}]
+              }),
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'b'}]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '* a\n\n1. b\n'
+      )
+
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'a'}]
+                      }
+                    ]
+                  }
+                ]
+              },
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'b'}]
+              })
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '1. a\n\n* b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should use a different delimiter for adjacent ordered lists with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'a'}]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'b'}]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '1. a\n\n1) b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should respect `bulletOrdered` with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'a'}]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: 'list',
+                ordered: true,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [{type: 'text', value: 'b'}]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {bulletOrdered: ')', listMarkerStrategy: 'context'}
+        ),
+        '1) a\n\n1. b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should respect `bullet` and `bulletOther` with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'a'}]
+              }),
+              createList({
+                type: 'paragraph',
+                children: [{type: 'text', value: 'b'}]
+              })
+            ]
+          },
+          {bullet: '-', bulletOther: '*', listMarkerStrategy: 'context'}
+        ),
+        '- a\n\n* b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should avoid a marker that forms a thematic break with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'list',
+            children: [{type: 'listItem', children: [{type: 'thematicBreak'}]}]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '- ***\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should use a different bullet for an empty list item in three lists with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(createList(createList(createList())), {
+          listMarkerStrategy: 'context'
+        }),
+        '* * -\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should keep ordered start numbers with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'list',
+            ordered: true,
+            start: 3,
+            children: [
+              {
+                type: 'listItem',
+                children: [
+                  {type: 'paragraph', children: [{type: 'text', value: 'a'}]}
+                ]
+              },
+              {
+                type: 'listItem',
+                children: [
+                  {type: 'paragraph', children: [{type: 'text', value: 'b'}]}
+                ]
+              }
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '3. a\n\n4. b\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should keep nested tight lists tight with `listMarkerStrategy: "context"`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'list',
+            ordered: false,
+            spread: false,
+            children: [
+              {
+                type: 'listItem',
+                spread: false,
+                children: [
+                  {type: 'paragraph', children: [{type: 'text', value: 'a'}]},
+                  {
+                    type: 'list',
+                    ordered: false,
+                    spread: false,
+                    children: [
+                      {
+                        type: 'listItem',
+                        spread: false,
+                        children: [
+                          {
+                            type: 'paragraph',
+                            children: [{type: 'text', value: 'b'}]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: 'listItem',
+                spread: false,
+                children: [
+                  {type: 'paragraph', children: [{type: 'text', value: 'c'}]}
+                ]
+              }
+            ]
+          },
+          {listMarkerStrategy: 'context'}
+        ),
+        '* a\n  * b\n* c\n'
+      )
+    }
+  )
+})
+
 test('paragraph', async function (t) {
   await t.test('should support an empty paragraph', async function () {
     assert.equal(

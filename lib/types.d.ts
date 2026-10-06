@@ -683,6 +683,24 @@ export interface Options {
    */
   listItemIndent?: 'mixed' | 'one' | 'tab' | null | undefined
   /**
+   * Strategy used to pick list markers (default: `'default'`).
+   *
+   * With `'default'`, the preferred markers (`bullet`, `bulletOrdered`) are
+   * used, switched to their alternates (`bulletOther`, `'.'`/`')'`) when the
+   * previously serialized list used the same marker or when the marker could
+   * form a thematic break.
+   *
+   * With `'context'`, the marker of each list is chosen explicitly from the
+   * adjacent blocks around it in the tree: sibling lists in the same parent
+   * are inspected and a marker is picked that neither merges with a
+   * neighboring list nor forms a thematic break or an indented code block,
+   * instead of relying on one global “last used” marker.
+   * Nesting and ordered start numbers are handled separately (when
+   * serializing the list items) and tight/loose whitespace is untouched, so
+   * parsing the output again yields the same node structure.
+   */
+  listMarkerStrategy?: 'context' | 'default' | null | undefined
+  /**
    * Marker to use for titles (default: `'"'`).
    */
   quote?: '"' | "'" | null | undefined
