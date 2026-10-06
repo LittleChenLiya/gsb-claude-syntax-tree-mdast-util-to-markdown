@@ -856,12 +856,12 @@ test('code (flow)', async function (t) {
     )
   })
 
-  await t.test('should encode a grave accent in `lang`', async function () {
-    assert.equal(
-      to({type: 'code', lang: 'a`b', value: ''}),
-      '```a&#x60;b\n```\n'
-    )
-  })
+  await t.test(
+    'should use a tilde fence when there is a grave accent in `lang`',
+    async function () {
+      assert.equal(to({type: 'code', lang: 'a`b', value: ''}), '~~~a`b\n~~~\n')
+    }
+  )
 
   await t.test('should escape a backslash in `lang`', async function () {
     assert.equal(
@@ -884,12 +884,15 @@ test('code (flow)', async function (t) {
     )
   })
 
-  await t.test('should encode a grave accent in `meta`', async function () {
-    assert.equal(
-      to({type: 'code', lang: 'x', meta: 'a`b', value: ''}),
-      '```x a&#x60;b\n```\n'
-    )
-  })
+  await t.test(
+    'should use a tilde fence when there is a grave accent in `meta`',
+    async function () {
+      assert.equal(
+        to({type: 'code', lang: 'x', meta: 'a`b', value: ''}),
+        '~~~x a`b\n~~~\n'
+      )
+    }
+  )
 
   await t.test('should escape a backslash in `meta`', async function () {
     assert.equal(
@@ -934,6 +937,32 @@ test('code (flow)', async function (t) {
       )
     }
   )
+
+  await t.test(
+    'should fully fence a value that contains four consecutive grave accents',
+    async function () {
+      assert.equal(to({type: 'code', value: '````'}), '`````\n````\n`````\n')
+    }
+  )
+
+  await t.test(
+    'should round-trip a value that contains four consecutive grave accents',
+    async function () {
+      const value = '````'
+      const tree = from(to({type: 'code', value}))
+      const code = tree.children[0]
+      assert.equal(code.type, 'code')
+      assert.equal(code.value, value)
+    }
+  )
+
+  await t.test('should round-trip an empty block', async function () {
+    // @ts-expect-error: check how the runtime handles `value` missing.
+    const tree = from(to({type: 'code'}))
+    const code = tree.children[0]
+    assert.equal(code.type, 'code')
+    assert.equal(code.value, '')
+  })
 
   await t.test('should use a fence if there is an info', async function () {
     assert.equal(to({type: 'code', lang: 'a', value: 'b'}), '```a\nb\n```\n')

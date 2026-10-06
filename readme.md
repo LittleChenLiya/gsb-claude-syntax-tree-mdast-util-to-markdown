@@ -140,6 +140,52 @@ console.log(toMarkdown(tree))
 > 👉 **Note**: observe the properly escaped characters which would otherwise
 > turn into a list and image respectively.
 
+### Fenced code
+
+Code blocks are fenced with an explicit plan: the marker (backtick or tilde)
+and the fence length are chosen from both the content and the info string, so
+that a streak of the marker in the content never closes the block early.
+When the info string contains a backtick (which is illegal in a backtick
+fence), a tilde fence is used instead.
+
+Say our module `example-code.js` looks as follows:
+
+```js
+import {toMarkdown} from 'mdast-util-to-markdown'
+
+// 1. A default, fenced code block.
+console.log(toMarkdown({type: 'code', value: 'a'}))
+
+// 2. Content with four consecutive backticks: the fence is made longer.
+console.log(toMarkdown({type: 'code', value: '````'}))
+
+// 3. An info string with a backtick: a tilde fence is used instead.
+console.log(toMarkdown({type: 'code', lang: 'a`b', value: ''}))
+
+// 4. An empty block: it still round-trips.
+console.log(toMarkdown({type: 'code'}))
+```
+
+…now running `node example-code.js` yields:
+
+``````markdown
+```
+a
+```
+`````
+````
+`````
+~~~a`b
+~~~
+```
+```
+``````
+
+> 👉 **Note**: observe that the four consecutive backticks in the second
+> example are fully enclosed by a longer fence, that the backtick in the info
+> string of the third example switches to a tilde fence, and that the empty
+> block in the fourth example round-trips.
+
 ## API
 
 This package exports the identifiers [`defaultHandlers`][api-default-handlers]
