@@ -9,7 +9,8 @@
  *   Parents,
  *   PhrasingContent,
  *   Root,
- *   Strong
+ *   Strong,
+ *   Text
  * } from 'mdast'
  */
 
@@ -856,12 +857,12 @@ test('code (flow)', async function (t) {
     )
   })
 
-  await t.test('should encode a grave accent in `lang`', async function () {
-    assert.equal(
-      to({type: 'code', lang: 'a`b', value: ''}),
-      '```a&#x60;b\n```\n'
-    )
-  })
+  await t.test(
+    'should use tildes for fences if `lang` contains a grave accent',
+    async function () {
+      assert.equal(to({type: 'code', lang: 'a`b', value: ''}), '~~~a`b\n~~~\n')
+    }
+  )
 
   await t.test('should escape a backslash in `lang`', async function () {
     assert.equal(
@@ -884,12 +885,15 @@ test('code (flow)', async function (t) {
     )
   })
 
-  await t.test('should encode a grave accent in `meta`', async function () {
-    assert.equal(
-      to({type: 'code', lang: 'x', meta: 'a`b', value: ''}),
-      '```x a&#x60;b\n```\n'
-    )
-  })
+  await t.test(
+    'should use tildes for fences if `meta` contains a grave accent',
+    async function () {
+      assert.equal(
+        to({type: 'code', lang: 'x', meta: 'a`b', value: ''}),
+        '~~~x a`b\n~~~\n'
+      )
+    }
+  )
 
   await t.test('should escape a backslash in `meta`', async function () {
     assert.equal(
@@ -912,6 +916,66 @@ test('code (flow)', async function (t) {
         to({type: 'code', lang: 'a`b', value: ''}, {fence: '~'}),
         '~~~a`b\n~~~\n'
       )
+    }
+  )
+
+  await t.test(
+    'should use grave accents for fences if the info starts with a tilde and `fence: "~"`',
+    async function () {
+      assert.equal(
+        to({type: 'code', lang: '~a', value: 'b'}, {fence: '~'}),
+        '```~a\nb\n```\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should use tildes for fences if the info starts with a grave accent',
+    async function () {
+      assert.equal(
+        to({type: 'code', lang: '`a', value: 'b'}),
+        '~~~`a\nb\n~~~\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should throw if the info works with neither fence marker',
+    async function () {
+      assert.throws(function () {
+        to({type: 'code', lang: '~`a', value: 'b'})
+      }, /Cannot serialize code with info string `~`a`: the info is incompatible with both `` ` `` and `~` fences/)
+    }
+  )
+
+  await t.test(
+    'should use a longer fence if the value has a streak of four grave accents (fences)',
+    async function () {
+      assert.equal(
+        to({type: 'code', value: '````\nasd\n````'}),
+        '`````\n````\nasd\n````\n`````\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should use more tildes for fences if the info has a grave accent and the value has streaks of tildes (fences)',
+    async function () {
+      assert.equal(
+        to({type: 'code', lang: 'a`b', value: '~~~'}),
+        '~~~~a`b\n~~~\n~~~~\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should round-trip a trailing line ending in the value (fences)',
+    async function () {
+      const markdown = to({type: 'code', value: 'a\n'})
+      assert.equal(markdown, '```\na\n\n```\n')
+      // The trailing line ending is part of the AST value: parsing the
+      // result and serializing again gives the same markdown.
+      assert.equal(to(from(markdown)), markdown)
     }
   )
 
@@ -4779,6 +4843,32 @@ test('escape', async function (t) {
           }
         ),
         '__a__\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should support `encode` in safe configuration (coverage)',
+    async function () {
+      assert.equal(
+        to(
+          {type: 'paragraph', children: [{type: 'text', value: 'a`b'}]},
+          {
+            handlers: {
+              /**
+               * Serialize text, encoding grave accents.
+               *
+               * @type {Handle}
+               * @param {Text} node
+               *   Text node.
+               */
+              text(node, _, state, info) {
+                return state.safe(node.value, {...info, encode: ['`']})
+              }
+            }
+          }
+        ),
+        'a&#x60;b\n'
       )
     }
   )
