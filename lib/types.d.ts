@@ -331,6 +331,15 @@ export interface ConstructNameMap {
    */
   titleApostrophe: 'titleApostrophe'
   /**
+   * Title using parentheses (occurs in image, link).
+   *
+   * ```markdown
+   * > | [a](b (c))
+   *           ^^^
+   * ```
+   */
+  titleParen: 'titleParen'
+  /**
    * Title using double quotes (occurs in definition, image, link).
    *
    * ```markdown

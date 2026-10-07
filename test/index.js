@@ -1986,12 +1986,45 @@ test('image', async function (t) {
     }
   )
 
-  await t.test('should escape a double quote in `title`', async function () {
-    assert.equal(
-      to({type: 'image', url: '', title: 'b"c'}),
-      '![](<> "b\\"c")\n'
-    )
-  })
+  await t.test(
+    'should use apostrophes if a double quote is in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'image', url: '', title: 'b"c'}),
+        "![](<> 'b\"c')\n"
+      )
+    }
+  )
+
+  await t.test(
+    'should use parentheses if both quotes are in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'image', url: '', title: 'b"c\'d'}),
+        '![](<> (b"c\'d))\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should escape delimiters if all kinds are in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'image', url: '', title: 'b"c\'d(e'}),
+        '![](<> "b\\"c\'d(e")\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should escape parens if parentheses are shortest for `title`',
+    async function () {
+      assert.equal(
+        to({type: 'image', url: '', title: 'b"c"d\'e\'f(g'}),
+        '![](<> (b"c"d\'e\'f\\(g))\n'
+      )
+    }
+  )
 
   await t.test('should escape a backslash in `title`', async function () {
     assert.equal(
@@ -2011,11 +2044,11 @@ test('image', async function (t) {
   )
 
   await t.test(
-    'should escape a quote in `title` in a title when `quote: "\'"`',
+    'should use quotes if an apostrophe is in `title` when `quote: "\'"`',
     async function () {
       assert.equal(
         to({type: 'image', url: '', title: "'"}, {quote: "'"}),
-        "![](<> '\\'')\n"
+        '![](<> "\'")\n'
       )
     }
   )
@@ -2432,12 +2465,55 @@ test('link', async function (t) {
     assert.equal(to({type: 'link', url: '\f', children: []}), '[](<\f>)\n')
   })
 
-  await t.test('should escape a double quote in `title`', async function () {
-    assert.equal(
-      to({type: 'link', url: '', title: 'b"c', children: []}),
-      '[](<> "b\\"c")\n'
-    )
-  })
+  await t.test(
+    'should use apostrophes if a double quote is in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c', children: []}),
+        "[](<> 'b\"c')\n"
+      )
+    }
+  )
+
+  await t.test(
+    'should use parentheses if both quotes are in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c\'d', children: []}),
+        '[](<> (b"c\'d))\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should escape delimiters if all kinds are in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c\'d(e', children: []}),
+        '[](<> "b\\"c\'d(e")\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should escape parens if parentheses are shortest for `title`',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c"d\'e\'f(g', children: []}),
+        '[](<> (b"c"d\'e\'f\\(g))\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should support line endings in `title`',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: 'a', title: 'b\nc', children: []}),
+        '[](a "b\nc")\n'
+      )
+    }
+  )
 
   await t.test('should escape a backslash in `title`', async function () {
     assert.equal(
@@ -2445,6 +2521,39 @@ test('link', async function (t) {
       '[](<> "b\\\\-c")\n'
     )
   })
+
+  await t.test(
+    'should roundtrip `title` w/ quotes, parens, and line endings',
+    async function () {
+      const titles = [
+        'a "b" c',
+        "a 'b' c",
+        'a (b) c',
+        'a "b" \'c\' d',
+        'a "b" (c) d',
+        'a "b" \'c\' (d) e',
+        'a\nb',
+        'a "b"\n\'c\' (d)'
+      ]
+
+      const actual = titles.map(function (title) {
+        const value = to({type: 'link', url: 'b', title, children: []})
+        const paragraph = /** @type {import('mdast').Paragraph} */ (
+          from(value).children[0]
+        )
+        const link = /** @type {Link} */ (paragraph.children[0])
+
+        return {title: link.title, url: link.url}
+      })
+
+      assert.deepEqual(
+        actual,
+        titles.map(function (title) {
+          return {title, url: 'b'}
+        })
+      )
+    }
+  )
 
   await t.test(
     'should use an autolink for nodes w/ a value similar to the url and a protocol',
@@ -2693,11 +2802,11 @@ test('link', async function (t) {
   )
 
   await t.test(
-    'should escape a quote in `title` in a title when `quote: "\'"`',
+    'should use quotes if an apostrophe is in `title` when `quote: "\'"`',
     async function () {
       assert.equal(
         to({type: 'link', url: '', title: "'", children: []}, {quote: "'"}),
-        "[](<> '\\'')\n"
+        '[](<> "\'")\n'
       )
     }
   )
