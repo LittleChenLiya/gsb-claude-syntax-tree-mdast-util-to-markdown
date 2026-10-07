@@ -661,6 +661,14 @@ export interface Options {
    */
   fence?: '`' | '~' | null | undefined
   /**
+   * Marker to use for hard breaks (default: `'\\'`).
+   *
+   * Either a backslash (`'\\'`) or two spaces (`'  '`), which are both only
+   * used on `break` nodes; indentation of nested lists and block quotes is
+   * kept and code content is never changed.
+   */
+  hardBreak?: '\\' | '  ' | null | undefined
+  /**
    * Handle particular nodes (optional).
    *
    * Each key is a node type, each value its corresponding handler.

@@ -2,6 +2,8 @@
  * @import {Attention, Handle, Info, State} from 'mdast-util-to-markdown'
  * @import {
  *   BlockContent,
+ *   Break,
+ *   Code,
  *   Delete,
  *   Emphasis,
  *   Link,
@@ -796,6 +798,153 @@ test('break', async function (t) {
     'should serialize breaks in heading (setext)',
     async function () {
       assert.equal(to(from('a  \nb\n=\n'), {setext: true}), 'a\\\nb\n=\n')
+    }
+  )
+
+  await t.test(
+    'should support `hardBreak: \'\\\'` (backslash, default)',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'paragraph',
+            children: [
+              {type: 'text', value: 'a'},
+              {type: 'break'},
+              {type: 'text', value: 'b'}
+            ]
+          },
+          {hardBreak: '\\'}
+        ),
+        'a\\\nb\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should support `hardBreak: \'  \'` (two spaces)',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'paragraph',
+            children: [
+              {type: 'text', value: 'a'},
+              {type: 'break'},
+              {type: 'text', value: 'b'}
+            ]
+          },
+          {hardBreak: '  '}
+        ),
+        'a  \nb\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should throw on when given an incorrect `hardBreak`',
+    async function () {
+      assert.throws(function () {
+        // @ts-expect-error: check how the runtime handles an incorrect `hardBreak` marker.
+        to({type: 'break'}, {hardBreak: '~'})
+      }, /Cannot serialize break with `~` for `options\.hardBreak`, expected `\\` or ` {2}`/)
+    }
+  )
+
+  await t.test(
+    'should keep indentation of breaks in lists and block quotes with `hardBreak: \'  \'`',
+    async function () {
+      assert.equal(
+        to(
+          {
+            type: 'root',
+            children: [
+              {
+                type: 'list',
+                ordered: false,
+                children: [
+                  {
+                    type: 'listItem',
+                    children: [
+                      {
+                        type: 'paragraph',
+                        children: [
+                          {type: 'text', value: 'a'},
+                          {type: 'break'},
+                          {type: 'text', value: 'b'}
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: 'blockquote',
+                children: [
+                  {
+                    type: 'paragraph',
+                    children: [
+                      {type: 'text', value: 'c'},
+                      {type: 'break'},
+                      {type: 'text', value: 'd'}
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {hardBreak: '  '}
+        ),
+        '* a  \n  b\n\n> c  \n> d\n'
+      )
+    }
+  )
+
+  await t.test(
+    'should round-trip breaks in paragraphs, lists, quotes, and code with both `hardBreak` strategies',
+    async function () {
+      /** @type {Array<'\\' | '  '>} */
+      const strategies = ['\\', '  ']
+
+      for (const hardBreak of strategies) {
+        const tree = from(
+          'alpha\\\nomega\n\n* one\\\n  two\n\n> red\\\n> blue\n\n```js\na  \\\nb\n```\n'
+        )
+        const markdown = to(tree, {hardBreak})
+        const back = from(markdown)
+        /** @type {Array<Break>} */
+        const breaks = []
+        /** @type {Array<Code>} */
+        const codes = []
+        /** @type {Array<import('mdast').Nodes>} */
+        const stack = [back]
+
+        while (stack.length > 0) {
+          const node = stack.pop()
+
+          assert(node)
+
+          if (node.type === 'break') {
+            breaks.push(node)
+          }
+
+          if (node.type === 'code') {
+            codes.push(node)
+          }
+
+          if ('children' in node) {
+            stack.push(...node.children)
+          }
+        }
+
+        assert.equal(breaks.length, 3)
+        assert.equal(codes.length, 1)
+        assert.equal(codes[0].value, 'a  \\\nb')
+        // Adjacent text around breaks is kept.
+        assert.equal(markdown.includes('alpha' + hardBreak + '\nomega'), true)
+        assert.equal(markdown.includes('one' + hardBreak + '\n  two'), true)
+        assert.equal(markdown.includes('red' + hardBreak + '\n> blue'), true)
+      }
     }
   )
 })
