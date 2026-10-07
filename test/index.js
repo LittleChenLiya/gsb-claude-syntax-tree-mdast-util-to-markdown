@@ -6,6 +6,7 @@
  *   Emphasis,
  *   Link,
  *   List,
+ *   Paragraph,
  *   Parents,
  *   PhrasingContent,
  *   Root,
@@ -2432,12 +2433,122 @@ test('link', async function (t) {
     assert.equal(to({type: 'link', url: '\f', children: []}), '[](<\f>)\n')
   })
 
-  await t.test('should escape a double quote in `title`', async function () {
+  await t.test(
+    'should use apostrophes for a `title` w/ a double quote',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c', children: []}),
+        `[](<> 'b"c')\n`
+      )
+    }
+  )
+
+  await t.test(
+    'should use the preferred quote for a `title` w/ an apostrophe',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: "b'c", children: []}),
+        `[](<> "b'c")\n`
+      )
+    }
+  )
+
+  await t.test(
+    'should use parentheses for a `title` w/ both quotes',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c\'d', children: []}),
+        `[](<> (b"c'd))\n`
+      )
+    }
+  )
+
+  await t.test(
+    'should escape in the preferred quote if every `title` marker conflicts',
+    async function () {
+      assert.equal(
+        to({type: 'link', url: '', title: 'b"c\'d)e', children: []}),
+        `[](<> "b\\"c'd)e")\n`
+      )
+    }
+  )
+
+  await t.test(
+    'should escape in the preferred apostrophe if every `title` marker conflicts and `quote: "\'"`',
+    async function () {
+      assert.equal(
+        to(
+          {type: 'link', url: '', title: 'b"c\'d)e', children: []},
+          {quote: "'"}
+        ),
+        `[](<> 'b"c\\'d)e')\n`
+      )
+    }
+  )
+
+  await t.test('should support a line ending in `title`', async function () {
     assert.equal(
-      to({type: 'link', url: '', title: 'b"c', children: []}),
-      '[](<> "b\\"c")\n'
+      to({type: 'link', url: '', title: 'e\nf', children: []}),
+      '[](<> "e\nf")\n'
     )
   })
+
+  await t.test(
+    'should round-trip `url` and `title` through the chosen markers',
+    async function () {
+      const titles = [
+        'b"c',
+        "b'c",
+        'b"c\'d',
+        'b"c\'d)e',
+        'b(c',
+        'b)c',
+        'e\nf',
+        'a"b\'c)d\ne'
+      ]
+
+      /** @type {Array<Array<string | null | undefined>>} */
+      const results = []
+
+      for (const title of titles) {
+        const value = to({type: 'link', url: 'a b', title, children: []})
+        const paragraph = /** @type {Paragraph} */ (from(value).children[0])
+        const link = /** @type {Link} */ (paragraph.children[0])
+        results.push([title, link.url, link.title])
+      }
+
+      assert.deepEqual(
+        results,
+        titles.map((title) => [title, 'a b', title])
+      )
+    }
+  )
+
+  await t.test(
+    'should not change reference links and definitions',
+    async function () {
+      assert.equal(
+        to({
+          type: 'root',
+          children: [
+            {
+              type: 'paragraph',
+              children: [
+                {
+                  type: 'linkReference',
+                  identifier: 'a',
+                  referenceType: 'shortcut',
+                  children: [{type: 'text', value: 'a'}]
+                }
+              ]
+            },
+            {type: 'definition', identifier: 'a', url: 'c', title: 'd"e'}
+          ]
+        }),
+        '[a]\n\n[a]: c "d\\"e"\n'
+      )
+    }
+  )
 
   await t.test('should escape a backslash in `title`', async function () {
     assert.equal(
@@ -2693,11 +2804,11 @@ test('link', async function (t) {
   )
 
   await t.test(
-    'should escape a quote in `title` in a title when `quote: "\'"`',
+    'should use a double quote for a `title` w/ an apostrophe when `quote: "\'"`',
     async function () {
       assert.equal(
         to({type: 'link', url: '', title: "'", children: []}, {quote: "'"}),
-        "[](<> '\\'')\n"
+        `[](<> "'")\n`
       )
     }
   )
