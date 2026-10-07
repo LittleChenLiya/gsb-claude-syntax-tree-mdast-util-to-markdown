@@ -6,6 +6,7 @@
  *   Emphasis,
  *   Link,
  *   List,
+ *   Nodes,
  *   Parents,
  *   PhrasingContent,
  *   Root,
@@ -796,6 +797,97 @@ test('break', async function (t) {
     'should serialize breaks in heading (setext)',
     async function () {
       assert.equal(to(from('a  \nb\n=\n'), {setext: true}), 'a\\\nb\n=\n')
+    }
+  )
+
+  await t.test(
+    'should support `hardBreak: "backslash"` explicitly',
+    async function () {
+      assert.equal(to({type: 'break'}, {hardBreak: 'backslash'}), '\\\n')
+    }
+  )
+
+  await t.test('should support `hardBreak: "spaces"`', async function () {
+    assert.equal(to({type: 'break'}, {hardBreak: 'spaces'}), '  \n')
+  })
+
+  await t.test(
+    'should round-trip a paragraph w/ `hardBreak: "backslash"`',
+    async function () {
+      const tree = from('a\\\nb\n')
+      const doc = to(tree, {hardBreak: 'backslash'})
+      assert.equal(doc, 'a\\\nb\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should round-trip a paragraph w/ `hardBreak: "spaces"`',
+    async function () {
+      const tree = from('a  \nb\n')
+      const doc = to(tree, {hardBreak: 'spaces'})
+      assert.equal(doc, 'a  \nb\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should round-trip a list w/ `hardBreak: "backslash"`',
+    async function () {
+      const tree = from('* a\\\n  b\n')
+      const doc = to(tree, {hardBreak: 'backslash'})
+      assert.equal(doc, '* a\\\n  b\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should round-trip a list w/ `hardBreak: "spaces"`',
+    async function () {
+      const tree = from('* a  \n  b\n')
+      const doc = to(tree, {hardBreak: 'spaces'})
+      assert.equal(doc, '* a  \n  b\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should round-trip a block quote w/ `hardBreak: "backslash"`',
+    async function () {
+      const tree = from('> a\\\n> b\n')
+      const doc = to(tree, {hardBreak: 'backslash'})
+      assert.equal(doc, '> a\\\n> b\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should round-trip a block quote w/ `hardBreak: "spaces"`',
+    async function () {
+      const tree = from('> a  \n> b\n')
+      const doc = to(tree, {hardBreak: 'spaces'})
+      assert.equal(doc, '> a  \n> b\n')
+      assert.equal(countBreaks(from(doc)), 1)
+    }
+  )
+
+  await t.test(
+    'should not change code w/ `hardBreak: "backslash"`',
+    async function () {
+      const tree = from('```\na  \nb\n```\n')
+      const doc = to(tree, {hardBreak: 'backslash'})
+      assert.equal(doc, '```\na  \nb\n```\n')
+      assert.equal(countBreaks(from(doc)), 0)
+    }
+  )
+
+  await t.test(
+    'should not change code w/ `hardBreak: "spaces"`',
+    async function () {
+      const tree = from('```\na\\\nb\n```\n')
+      const doc = to(tree, {hardBreak: 'spaces'})
+      assert.equal(doc, '```\na\\\nb\n```\n')
+      assert.equal(countBreaks(from(doc)), 0)
     }
   )
 })
@@ -6458,4 +6550,25 @@ function createList(d) {
       {type: 'listItem', children: Array.isArray(d) ? d : d ? [d] : []}
     ]
   }
+}
+
+/**
+ * Count the `break` nodes in a tree.
+ *
+ * @param {Nodes} tree
+ *   Tree to search.
+ * @returns {number}
+ *   Number of `break` nodes in `tree`.
+ */
+function countBreaks(tree) {
+  /** @type {number} */
+  let count = 0
+
+  if ('children' in tree) {
+    for (const child of tree.children) {
+      count += countBreaks(child)
+    }
+  }
+
+  return count + (tree.type === 'break' ? 1 : 0)
 }

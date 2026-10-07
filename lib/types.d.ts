@@ -667,6 +667,15 @@ export interface Options {
    */
   handlers?: Partial<Handlers> | null | undefined
   /**
+   * How to encode hard breaks (default: `'backslash'`).
+   *
+   * Either with a backslash before the line ending (`'backslash'`, as in
+   * `a\\\nb`) or with two trailing spaces (`'spaces'`, as in `a  \nb`).
+   * The encoding only applies to `break` nodes; code content is never
+   * affected.
+   */
+  hardBreak?: 'backslash' | 'spaces' | null | undefined
+  /**
    * Whether to increment the counter of ordered lists items (default: `true`).
    */
   incrementListMarker?: boolean | null | undefined

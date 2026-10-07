@@ -411,6 +411,14 @@ Whether to use fenced code always (`boolean`, default: `true`).
 The default is to use fenced code if there is a language defined, if the code is
 empty, or if it starts or ends in blank lines.
 
+###### `options.hardBreak`
+
+How to encode hard breaks (`'backslash'` or `'spaces'`, default:
+`'backslash'`).
+Either with a backslash before the line ending (`a\\\nb`) or with two
+trailing spaces (`a  \nb`).
+The encoding only applies to `break` nodes; code content is never affected.
+
 ###### `options.incrementListMarker`
 
 Whether to increment the counter of ordered lists items (`boolean`, default:
